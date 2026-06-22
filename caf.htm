@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Certta — Teste de Token</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet" />
+
+  <!-- SDKs Certta -->
+  <script src="https://repo.combateafraude.com/javascript/release/caf-face-liveness/0.17.0/caf-face-liveness_0.17.0.umd.js"></script>
+  <script src="https://repo.combateafraude.com/javascript/release/document-detector/6.8.5/document-detector-6.8.5.umd.js"></script>
+
+  <style>
+    :root {
+      --bg:#F5F4F0; --surface:#FFFFFF; --surface-2:#F0EFE9;
+      --border:#DDD9D0; --border-2:#C8C4BA;
+      --text:#1A1916; --text-2:#5C5A54; --text-3:#9A9790;
+      --certta:#1B4D3E; --certta-mid:#2D6B57; --certta-soft:#EAF2EE;
+      --gold:#B8860B; --gold-soft:#FBF5E2;
+      --ok:#1B7A4A; --ok-soft:#E8F5EE;
+      --warn:#B8701A; --warn-soft:#FEF4E6;
+      --err:#C0392B; --err-soft:#FDEEEC;
+      --info:#1A4B7A; --info-soft:#EBF2FC;
+      --font-body:'Sora',sans-serif; --font-mono:'DM Mono',monospace;
+      --shadow-sm:0 1px 4px rgba(26,25,22,.06),0 0 0 1px rgba(26,25,22,.04);
+      --shadow-md:0 4px 16px rgba(26,25,22,.09),0 0 0 1px rgba(26,25,22,.05);
+    }
+    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text); font-family:var(--font-body); font-size:14px; line-height:1.6; }
+    .shell { max-width:1280px; margin:0 auto; padding:24px 28px; }
+
+    /* Header */
+    .header { display:flex; align-items:center; justify-content:space-between; padding-bottom:20px; border-bottom:1px solid var(--border); margin-bottom:24px; }
+    .brand { display:flex; align-items:center; gap:14px; }
+    .logomark { width:44px; height:44px; border-radius:12px; background:var(--certta); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:22px; }
+    .brand-name { font-size:17px; font-weight:700; }
+    .brand-sub { font-size:12px; color:var(--text-3); }
+    .env-pill { font-size:11px; font-family:var(--font-mono); padding:4px 10px; border-radius:999px; background:var(--certta-soft); color:var(--certta); border:1px solid rgba(27,77,62,.18); font-weight:500; }
+
+    /* Token bar */
+    .token-bar { background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-sm); padding:16px; margin-bottom:20px; }
+    .token-bar label { display:block; font-size:11px; color:var(--text-3); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+    .token-row { display:flex; gap:10px; align-items:flex-start; }
+    .token-bar textarea {
+      flex:1; resize:vertical; min-height:64px; font-family:var(--font-mono); font-size:12px;
+      background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text);
+    }
+    .config-row { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; align-items:center; }
+    .field { display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:7px 12px; }
+    .field label { font-size:11px; color:var(--text-3); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin:0; }
+    .field input, .field select { all:unset; font-family:var(--font-mono); font-size:13px; color:var(--text); min-width:120px; cursor:pointer; }
+
+    /* Buttons */
+    .btn { all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; font-weight:600; font-size:13px; border:1px solid var(--border); background:var(--surface); color:var(--text-2); box-shadow:var(--shadow-sm); transition:.15s; white-space:nowrap; }
+    .btn:hover:not(:disabled) { background:var(--surface-2); transform:translateY(-1px); box-shadow:var(--shadow-md); }
+    .btn:disabled { opacity:.45; cursor:not-allowed; }
+    .btn-primary { background:var(--certta); color:#fff; border-color:var(--certta-mid); }
+    .btn-primary:hover:not(:disabled) { background:var(--certta-mid); }
+    .btn-sm { padding:5px 10px; font-size:12px; }
+    .btn-danger { background:var(--err-soft); color:var(--err); border-color:rgba(192,57,43,.2); }
+
+    /* Layout */
+    .main-grid { display:grid; grid-template-columns:1fr 420px; gap:20px; }
+    .panel { background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-md); overflow:hidden; }
+    .panel-head { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); }
+    .panel-head h3 { font-size:14px; font-weight:700; }
+    .panel-body { padding:20px; }
+
+    /* Tabs */
+    .tabs { display:flex; gap:2px; padding:4px; background:var(--surface-2); border-radius:10px; margin-bottom:20px; }
+    .tab { flex:1; all:unset; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; padding:9px 14px; border-radius:8px; font-size:13px; font-weight:600; color:var(--text-3); transition:.15s; }
+    .tab:hover { color:var(--text-2); }
+    .tab.active { background:var(--surface); color:var(--certta); box-shadow:var(--shadow-sm); }
+    .tab-pane { display:none; }
+    .tab-pane.active { display:block; }
+
+    .sdk-container { min-height:300px; border:1px dashed var(--border-2); border-radius:10px; background:var(--bg); display:flex; align-items:center; justify-content:center; color:var(--text-3); font-size:13px; margin-bottom:14px; overflow:hidden; }
+    .placeholder { text-align:center; }
+    .placeholder .ph-icon { font-size:32px; margin-bottom:8px; }
+
+    .chips-row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+    .chip { font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; border:1px solid transparent; }
+    .chip-ok { background:var(--ok-soft); color:var(--ok); } .chip-err { background:var(--err-soft); color:var(--err); }
+    .chip-warn { background:var(--warn-soft); color:var(--warn); } .chip-info { background:var(--info-soft); color:var(--info); }
+
+    .json-viewer { font-family:var(--font-mono); font-size:11.5px; background:#1A1916; color:#C8E6C9; border-radius:10px; padding:14px; white-space:pre-wrap; word-break:break-word; max-height:240px; overflow-y:auto; line-height:1.7; margin-top:10px; }
+    .img-preview { display:block; max-width:100%; border-radius:10px; border:1px solid var(--border); margin-top:10px; }
+
+    /* Logs */
+    .log-panel { display:flex; flex-direction:column; max-height:calc(100vh - 220px); }
+    .log-panel .panel-body { flex:1; overflow-y:auto; padding:0; }
+    .log-table { width:100%; border-collapse:collapse; }
+    .log-table td { padding:6px 10px; vertical-align:top; border-bottom:1px solid var(--border); font-size:11.5px; line-height:1.5; }
+    .log-time { font-family:var(--font-mono); color:var(--text-3); white-space:nowrap; }
+    .log-scope { font-family:var(--font-mono); color:var(--certta); white-space:nowrap; }
+    .log-step { display:inline-block; font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--certta); background:var(--certta-soft); border:1px solid rgba(27,77,62,.2); border-radius:4px; padding:1px 5px; margin-right:5px; }
+    .lvl { font-weight:700; font-size:11px; font-family:var(--font-mono); white-space:nowrap; }
+    .lvl-info{color:var(--info);} .lvl-succ{color:var(--ok);} .lvl-warn{color:var(--warn);} .lvl-err{color:var(--err);} .lvl-ev{color:#7C3AED;}
+    .row-err td{background:var(--err-soft);} .row-succ td{background:var(--ok-soft);}
+    .log-sep td { background:linear-gradient(90deg,var(--certta-soft),transparent); color:var(--certta); font-weight:700; font-size:11px; letter-spacing:.4px; padding:5px 10px; }
+    details summary { cursor:pointer; color:var(--certta-mid); font-size:11px; }
+    .data-pre { font-family:var(--font-mono); font-size:11px; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px; max-height:160px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; color:var(--certta); margin-top:4px; }
+    ::-webkit-scrollbar{width:6px;height:6px;} ::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:999px;}
+    .muted{color:var(--text-3);}
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="header">
+    <div class="brand">
+      <div class="logomark">C</div>
+      <div>
+        <div class="brand-name">Certta — Teste de Token</div>
+        <div class="brand-sub">Cole um sessionToken e rode os fluxos · sem backend</div>
+      </div>
+    </div>
+    <div class="env-pill" id="env-pill">navegador</div>
+  </div>
+
+  <!-- Token bar -->
+  <div class="token-bar">
+    <label for="sessionToken">Session Token (mobileToken)</label>
+    <div class="token-row">
+      <textarea id="sessionToken" placeholder="Cole aqui o sessionToken que você quer validar…"></textarea>
+    </div>
+    <div class="config-row">
+      <div class="field">
+        <label>Person ID</label>
+        <input id="personId" value="test-user-123" />
+      </div>
+      <span class="muted" id="tokenInfo" style="font-size:12px;font-family:var(--font-mono);"></span>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <!-- Esquerda: abas -->
+    <div class="panel">
+      <div class="panel-body">
+        <div class="tabs">
+          <button class="tab active" data-tab="liveness"><span>👁</span> Liveness</button>
+          <button class="tab" data-tab="faceauth"><span>🔐</span> Face Auth</button>
+          <button class="tab" data-tab="document"><span>📄</span> Document</button>
+        </div>
+
+        <!-- Liveness -->
+        <div class="tab-pane active" id="pane-liveness">
+          <div class="sdk-container" id="liveness-container">
+            <div class="placeholder"><div class="ph-icon">👁</div><div>Cole o token e clique em <strong>Iniciar Liveness</strong></div></div>
+          </div>
+          <button id="btn-liveness" class="btn btn-primary">▶ Iniciar Liveness</button>
+          <div id="liveness-result"></div>
+        </div>
+
+        <!-- Face Auth -->
+        <div class="tab-pane" id="pane-faceauth">
+          <div class="sdk-container" id="auth-container">
+            <div class="placeholder"><div class="ph-icon">🔐</div><div>Cole o token e clique em <strong>Iniciar Face Auth</strong></div></div>
+          </div>
+          <button id="btn-auth" class="btn btn-primary">▶ Iniciar Face Auth</button>
+          <div id="auth-result"></div>
+        </div>
+
+        <!-- Document -->
+        <div class="tab-pane" id="pane-document">
+          <div class="config-row" style="margin-bottom:14px;">
+            <div class="field">
+              <label>Documento</label>
+              <select id="doc-type">
+                <option value="any">any</option>
+                <option value="cnh_front">cnh_front</option>
+                <option value="rg_front">rg_front</option>
+                <option value="passport">passport</option>
+              </select>
+            </div>
+            <button id="btn-document" class="btn btn-primary">▶ Iniciar Captura</button>
+          </div>
+          <div id="document-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Direita: logs -->
+    <div class="panel log-panel">
+      <div class="panel-head">
+        <h3>Logs</h3>
+        <div style="display:flex;gap:6px;">
+          <button id="btn-clear" class="btn btn-sm btn-danger">✕ Limpar</button>
+          <span id="log-count" style="font-size:11px;color:var(--text-3);font-family:var(--font-mono);align-self:center;">0</span>
+        </div>
+      </div>
+      <div class="panel-body"><table class="log-table"><tbody id="log-body"></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function getSdk(){ return window.CafFaceLiveness || null; }
+function sanitize(o){ if(typeof o==='string')return o; try{return JSON.stringify(o,null,2);}catch{return String(o);} }
+function ts(d=new Date()){ return d.toLocaleTimeString('pt-BR',{hour12:false})+'.'+String(d.getMilliseconds()).padStart(3,'0'); }
+
+// ─── Logger ───
+let logs=[], seq=0;
+function logSep(t){ const tr=document.createElement('tr'); tr.className='log-sep'; tr.innerHTML=`<td colspan="4">${t}</td>`; $('log-body').appendChild(tr); tr.scrollIntoView({behavior:'smooth',block:'end'}); }
+function addLog(level,scope,msg,data){
+  seq++; logs.push({seq,level,scope,msg,data});
+  const m={info:'lvl-info',succ:'lvl-succ',warn:'lvl-warn',err:'lvl-err',ev:'lvl-ev'};
+  const tr=document.createElement('tr');
+  if(level==='err')tr.className='row-err'; if(level==='succ')tr.className='row-succ';
+  const has=data!==undefined&&data!==null;
+  tr.innerHTML=`<td class="log-time">${ts()}</td><td class="lvl ${m[level]||'lvl-info'}">${level.toUpperCase()}</td><td class="log-scope">${scope}</td><td><span class="log-step">#${String(seq).padStart(3,'0')}</span>${msg}${has?`<details><summary>▶ detalhes</summary><pre class="data-pre">${sanitize(data)}</pre></details>`:''}</td>`;
+  $('log-body').appendChild(tr); $('log-count').textContent=logs.length; tr.scrollIntoView({behavior:'smooth',block:'end'});
+}
+$('btn-clear').onclick=()=>{ logs=[];seq=0;$('log-body').innerHTML='';$('log-count').textContent=0; };
+
+// ─── Tabs ───
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active'); $('pane-'+tab.dataset.tab).classList.add('active');
+  };
+});
+
+// ─── Decodifica JWT no próprio navegador (sem verificar assinatura) ───
+function decodeJwtLocal(jwt){
+  try{
+    const parts=jwt.split('.');
+    if(parts.length<2) return null;
+    const payload=JSON.parse(decodeURIComponent(escape(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')))));
+    return payload;
+  }catch(e){ return null; }
+}
+
+// ─── Token helpers ───
+function getToken(){
+  const t=$('sessionToken').value.trim();
+  if(!t){ addLog('warn','TOKEN','Cole um sessionToken primeiro.'); return null; }
+  return t;
+}
+$('sessionToken').oninput=()=>{
+  const t=$('sessionToken').value.trim();
+  if(!t){ $('tokenInfo').textContent=''; return; }
+  const p=decodeJwtLocal(t);
+  if(p){
+    const exp=p.exp?new Date(p.exp*1000):null;
+    const expired=exp&&exp<new Date();
+    $('tokenInfo').textContent=`✓ JWT válido · ${exp?('expira '+exp.toLocaleString('pt-BR')):'sem exp'}${expired?' (EXPIRADO!)':''}`;
+    $('tokenInfo').style.color=expired?'var(--err)':'var(--ok)';
+  }else{
+    $('tokenInfo').textContent='⚠ não parece um JWT válido';
+    $('tokenInfo').style.color='var(--warn)';
+  }
+};
+
+// ─── Render ───
+function renderChips(el,chips){ const r=document.createElement('div'); r.className='chips-row'; chips.forEach(c=>{const s=document.createElement('span');s.className=`chip chip-${c.type}`;s.textContent=c.label;r.appendChild(s);}); el.appendChild(r); }
+function renderResult(el,payload,chips){
+  el.innerHTML='';
+  if(chips) renderChips(el,chips);
+  if(payload?.imageUrl){ const img=document.createElement('img'); img.src=payload.imageUrl; img.className='img-preview'; img.referrerPolicy='no-referrer'; el.appendChild(img); }
+  const pre=document.createElement('div'); pre.className='json-viewer'; pre.textContent=sanitize(payload); el.appendChild(pre);
+}
+
+// ─── iProov events ───
+['sdk-button-ready','started','streaming','streamed','passed','failed','canceled','error','unsupported']
+  .forEach(evt=>document.addEventListener(evt,e=>addLog('ev','iProov',evt,e?.detail||null)));
+
+let running=false;
+
+// ─── Liveness ───
+$('btn-liveness').onclick=async()=>{
+  const token=getToken(); if(!token||running)return;
+  const Sdk=getSdk(); if(!Sdk)return addLog('err','LIVENESS','SDK CafFaceLiveness não encontrado.');
+  logSep('── Liveness ──'); running=true;
+  try{
+    const personId=$('personId').value.trim()||'user';
+    addLog('info','LIVENESS','Inicializando SDK com o token colado…',{personId});
+    await Sdk.init(token,personId,{ htmlContainerId:'liveness-container', performFaceAuthentication:false, language:'pt_BR' },
+      { startButton:{label:'Iniciar Liveness',backgroundColor:'#1B4D3E',color:'#fff'} });
+    addLog('succ','LIVENESS','SDK inicializado — aguardando usuário…');
+    const jwt=await Sdk.run();
+    addLog('succ','LIVENESS','Resultado recebido ✅',{token:jwt});
+    const payload=decodeJwtLocal(jwt);
+    addLog('info','JWT','Payload decodificado (sem verificação)',payload);
+    renderResult($('liveness-result'),payload,[
+      {label:payload?.isAlive?'Liveness: PASSOU ✅':'Liveness: ?',type:payload?.isAlive?'ok':'warn'},
+      {label:`sessionId: ${payload?.sessionId||'?'}`,type:'info'},
+    ]);
+  }catch(e){ addLog('err','LIVENESS',e.message||String(e),{stack:e.stack}); }
+  finally{
+    try{ await Sdk.dispose?.(); addLog('info','LIVENESS','SDK liberado (dispose) — câmera liberada'); }catch{}
+    running=false;
+  }
+};
+
+// ─── Face Auth ───
+$('btn-auth').onclick=async()=>{
+  const token=getToken(); if(!token||running)return;
+  const Sdk=getSdk(); if(!Sdk)return addLog('err','FACEAUTH','SDK CafFaceLiveness não encontrado.');
+  logSep('── Face Auth ──'); running=true;
+  try{
+    const personId=$('personId').value.trim()||'user';
+    addLog('info','FACEAUTH','Inicializando SDK (executeFaceAuth)…',{personId});
+    await Sdk.init(token,personId,{ htmlContainerId:'auth-container', performFaceAuthentication:true, language:'pt_BR' },
+      { startButton:{label:'Autenticar',backgroundColor:'#1B4D3E',color:'#fff'} });
+    addLog('succ','FACEAUTH','SDK inicializado — aguardando usuário…');
+    const jwt=await Sdk.run();
+    addLog('succ','FACEAUTH','Resultado recebido ✅',{token:jwt});
+    const payload=decodeJwtLocal(jwt);
+    addLog('info','JWT','Payload decodificado (sem verificação)',payload);
+    renderResult($('auth-result'),payload,[
+      {label:payload?.isAlive?'Liveness: PASSOU ✅':'Liveness: ?',type:payload?.isAlive?'ok':'warn'},
+      {label:payload?.isMatch?'Auth: MATCH ✅':'Auth: ?',type:payload?.isMatch?'ok':'warn'},
+    ]);
+  }catch(e){ addLog('err','FACEAUTH',e.message||String(e),{stack:e.stack}); }
+  finally{
+    try{ await Sdk.dispose?.(); addLog('info','FACEAUTH','SDK liberado (dispose) — câmera liberada'); }catch{}
+    running=false;
+  }
+};
+
+// ─── Document ───
+$('btn-document').onclick=async()=>{
+  const token=getToken(); if(!token||running)return;
+  const ns=window['@combateafraude/document-detector'];
+  if(!ns?.DocumentDetector)return addLog('err','DOC','SDK DocumentDetector não encontrado.');
+  logSep('── Document Detector ──'); running=true;
+  let docSdk;
+  try{
+    const personId=$('personId').value.trim()||'user';
+    const docType=$('doc-type').value||'any';
+    addLog('info','DOC','Instanciando DocumentDetector com o token…');
+    docSdk=new ns.DocumentDetector({ token, language:'pt_BR', enableFramingAnalyzer:true, analytics:{enabled:true} });
+    addLog('info','DOC','Carregando modelo de IA…');
+    await docSdk.loadAiModel();
+    await docSdk.initialize();
+    addLog('succ','DOC','SDK inicializado — abrindo captura…');
+    const result=await docSdk.capture({ expectedDocument:docType, mode:'automatic', automaticCaptureMaxDuration:30, personID:personId });
+    addLog('succ','DOC','Captura concluída ✅',result);
+    const possibleJwt=result?.token||result?.jwt||result?.resultToken||result?.signedResult||result?.documentToken;
+    let payload=null;
+    if(possibleJwt){ payload=decodeJwtLocal(possibleJwt); addLog('info','JWT','Payload decodificado (sem verificação)',payload); }
+    renderResult($('document-result'), payload||result, [
+      {label:`Tipo: ${result?.detectedDocument?.type||'?'}`,type:'info'},
+      {label:result?.isCaptureValid?'Válido ✅':'Inválido ❌',type:result?.isCaptureValid?'ok':'err'},
+    ]);
+  }catch(e){ addLog('err','DOC',e.message||String(e),{stack:e.stack}); }
+  finally{
+    if(docSdk){ try{await docSdk.close();}catch{} try{await docSdk.dispose();}catch{} }
+    running=false;
+  }
+};
+
+// ─── Boot ───
+addLog('info','APP','Pronto. Cole um sessionToken e escolha um fluxo.',{
+  sdkLiveness:!!getSdk(),
+  sdkDoc:!!window['@combateafraude/document-detector']?.DocumentDetector,
+});
+// Aviso sobre persistência de permissão de câmera
+if(location.protocol==='file:'){
+  addLog('warn','APP','Aberto via file:// — o navegador pede permissão de câmera repetidamente. Rode por um servidor local (ex: npx serve .) e acesse via http://localhost para a permissão ser lembrada.');
+}
+</script>
+</body>
+</html>
